@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-using IdentityServer3.Core.Validation;
-using System.Threading.Tasks;
 
-namespace IdentityServer3.Core.Services.Default
+namespace IdentityServer3.Core.Validation
 {
-    internal class NopCustomGrantValidator : ICustomGrantValidator
+    /// <summary>
+    /// Types of token you can request at the token endpoint
+    /// </summary>
+    public enum RequestedTokenTypes
     {
-        public Task<CustomGrantValidationResult> ValidateAsync(ValidatedTokenRequest request)
-        {
-            return Task.FromResult<CustomGrantValidationResult>(null);
-        }
+        /// <summary>
+        /// Bearer token
+        /// </summary>
+        Bearer,
 
-        public string GrantType
-        {
-            get { return ""; }
-        }
+        /// <summary>
+        /// Proof of possession token
+        /// </summary>
+        PoP
     }
 }

@@ -69,6 +69,8 @@ namespace Owin
                 app.SetLoggerFactory(new LibLogKatanaLoggerFactory());
             }
 
+            app.UseEmbeddedFileServer();
+
             app.ConfigureRequestId();
             app.ConfigureDataProtectionProvider(options);
             app.ConfigureIdentityServerBaseUrl(options.PublicOrigin);
@@ -97,8 +99,6 @@ namespace Owin
             {
                 options.AuthenticationOptions.IdentityProviders(app, Constants.ExternalAuthenticationType);
             }
-
-            app.UseEmbeddedFileServer();
 
             app.ConfigureHttpLogging(options.LoggingOptions);
 
@@ -131,7 +131,7 @@ namespace Owin
             }
             if (!cert.HasPrivateKey || !cert.IsPrivateAccessAllowed())
             {
-                Logger.Error("Signing certificate has not private key or private key is not accessible. Make sure the account running your application has access to the private key");
+                Logger.Error("Signing certificate has no private key or the private key is not accessible. Make sure the account running your application has access to the private key");
                 await eventSvc.RaiseCertificatePrivateKeyNotAccessibleEventAsync(cert);
 
                 return;

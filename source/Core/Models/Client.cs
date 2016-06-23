@@ -94,10 +94,15 @@ namespace IdentityServer3.Core.Models
         public string LogoutUri { get; set; }
 
         /// <summary>
-        /// Specifies is the user's session id should be sent to the LogoutUri. Defaults to true.
+        /// Specifies if the user's session id should be sent to the LogoutUri. Defaults to true.
         /// </summary>
         public bool LogoutSessionRequired { get; set; }
 
+        /// <summary>
+        /// Specifies if the client will always show a confirmation page for sign-out. Defaults to false.
+        /// </summary>
+        public bool RequireSignOutPrompt { get; set; }
+        
         /// <summary>
         /// Gets or sets a value indicating whether the client has access to all scopes. Defaults to false.
         /// You can set the allowed scopes via the AllowedScopes list.
@@ -233,6 +238,15 @@ namespace IdentityServer3.Core.Models
         public List<string> AllowedCorsOrigins { get; set; }
 
         /// <summary>
+        /// Controls whether access tokens are transmitted via the browser for this client (defaults to true).
+        /// This can prevent accidental leakage of access tokens when multiple response types are allowed.
+        /// </summary>
+        /// <value>
+        /// <c>true</c> if access tokens can be transmitted via the browser; otherwise, <c>false</c>.
+        /// </value>
+        public bool AllowAccessTokensViaBrowser { get; set; }
+
+        /// <summary>
         /// Creates a Client with default values
         /// </summary>
         public Client()
@@ -279,6 +293,8 @@ namespace IdentityServer3.Core.Models
             
             RequireConsent = true;
             AllowRememberConsent = true;
+
+            AllowAccessTokensViaBrowser = true;
         }
     }
 }

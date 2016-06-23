@@ -280,18 +280,7 @@ namespace IdentityServer3.Core.Extensions
         {
             if (context == null) throw new ArgumentNullException("context");
 
-            var options = context.ResolveDependency<IdentityServerOptions>();
-
-            // if they've explicitly configured a URI then use it,
-            // otherwise dynamically calculate it
-            var uri = options.IssuerUri;
-            if (uri.IsMissing())
-            {
-                uri = context.GetIdentityServerBaseUrl();
-                if (uri.EndsWith("/")) uri = uri.Substring(0, uri.Length - 1);
-            }
-
-            return uri;
+            return context.Environment.GetIdentityServerIssuerUri();
         }
 
         public static string GetIdentityServerLogoutUrl(this IOwinContext context)
@@ -464,7 +453,11 @@ namespace IdentityServer3.Core.Extensions
             context.Request.Method = "POST";
             context.Request.ContentType = "application/x-www-form-urlencoded";
             context.Request.Path = new PathString("/" + Constants.RoutePaths.Logout);
-            context.Request.QueryString = new QueryString("id", (string)context.Environment[QueueRenderLoggedOutPageFlag]);
+            var signOutId = context.Environment[QueueRenderLoggedOutPageFlag];
+            if (signOutId != null)
+            {
+                context.Request.QueryString = new QueryString("id", (string)context.Environment[QueueRenderLoggedOutPageFlag]);
+            }
 
             context.SetSuppressAntiForgeryCheck();
         }
@@ -491,7 +484,7 @@ namespace IdentityServer3.Core.Extensions
                 Constants.PartialSignInAuthenticationType);
         }
 
-        public static void SignOutOfExternalIdP(this IOwinContext context)
+        public static void SignOutOfExternalIdP(this IOwinContext context, string signOutId)
         {
             if (context == null) throw new ArgumentNullException("context");
 
@@ -503,7 +496,18 @@ namespace IdentityServer3.Core.Extensions
                 var idp = user.GetIdentityProvider();
                 if (idp != Constants.BuiltInIdentityProvider)
                 {
-                    context.Authentication.SignOut(idp);
+                    var authProps = new AuthenticationProperties();
+                    var options = context.ResolveDependency<IdentityServerOptions>();
+
+                    if (options.AuthenticationOptions.EnableAutoCallbackForFederatedSignout)
+                    {
+                        authProps.RedirectUri = context.Environment.GetIdentityServerLogoutUrl().EnsureTrailingSlash();
+                        if (signOutId != null)
+                        {
+                            authProps.RedirectUri = authProps.RedirectUri.AddQueryString(Constants.Authentication.SignoutId + "=" + signOutId);
+                        }
+                    }
+                    context.Authentication.SignOut(authProps, idp);
                 }
             }
         }

@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+using IdentityModel;
 using IdentityServer3.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text.RegularExpressions;
 
 #pragma warning disable 1591
 
@@ -58,36 +60,41 @@ namespace IdentityServer3.Core
 
         public static class AuthorizeRequest
         {
-            public const string Scope        = "scope";
-            public const string ResponseType = "response_type";
-            public const string ClientId     = "client_id";
-            public const string RedirectUri  = "redirect_uri";
-            public const string State        = "state";
-            public const string ResponseMode = "response_mode";
-            public const string Nonce        = "nonce";
-            public const string Display      = "display";
-            public const string Prompt       = "prompt";
-            public const string MaxAge       = "max_age";
-            public const string UiLocales    = "ui_locales";
-            public const string IdTokenHint  = "id_token_hint";
-            public const string LoginHint    = "login_hint";
-            public const string AcrValues    = "acr_values";
+            public const string Scope               = "scope";
+            public const string ResponseType        = "response_type";
+            public const string ClientId            = "client_id";
+            public const string RedirectUri         = "redirect_uri";
+            public const string State               = "state";
+            public const string ResponseMode        = "response_mode";
+            public const string Nonce               = "nonce";
+            public const string Display             = "display";
+            public const string Prompt              = "prompt";
+            public const string MaxAge              = "max_age";
+            public const string UiLocales           = "ui_locales";
+            public const string IdTokenHint         = "id_token_hint";
+            public const string LoginHint           = "login_hint";
+            public const string AcrValues           = "acr_values";
+            public const string CodeChallenge       = "code_challenge";
+            public const string CodeChallengeMethod = "code_challenge_method";
         }
 
         public static class TokenRequest
         {
-            public const string GrantType    = "grant_type";
-            public const string RedirectUri  = "redirect_uri";
-            public const string ClientId     = "client_id";
-            public const string ClientSecret = "client_secret";
-            public const string ClientAssertion = "client_assertion";
+            public const string GrantType           = "grant_type";
+            public const string RedirectUri         = "redirect_uri";
+            public const string ClientId            = "client_id";
+            public const string ClientSecret        = "client_secret";
+            public const string ClientAssertion     = "client_assertion";
             public const string ClientAssertionType = "client_assertion_type";
-            public const string Assertion    = "assertion";
-            public const string Code         = "code";
-            public const string RefreshToken = "refresh_token";
-            public const string Scope        = "scope";
-            public const string UserName     = "username";
-            public const string Password     = "password";
+            public const string Assertion           = "assertion";
+            public const string Code                = "code";
+            public const string RefreshToken        = "refresh_token";
+            public const string Scope               = "scope";
+            public const string UserName            = "username";
+            public const string Password            = "password";
+            public const string CodeVerifier        = "code_verifier";
+            public const string Algorithm           = "alg";
+            public const string Key                 = "key";
         }
 
         public static class EndSessionRequest
@@ -114,7 +121,19 @@ namespace IdentityServer3.Core
             public const string AccessToken   = "access_token";
             public const string IdentityToken = "id_token";
             public const string RefreshToken  = "refresh_token";
-            public const string Bearer        = "Bearer";
+        }
+
+        public static class ResponseTokenTypes
+        {
+            public const string Bearer = "Bearer";
+            public const string PoP = "pop";
+        }
+
+        public static class AuthenticationSchemes
+        {
+            public const string BearerAuthorizationHeader = "Bearer";
+            public const string BearerFormPost = "access_token";
+            public const string BearerQueryString = "access_token";
         }
 
         public static class GrantTypes
@@ -128,6 +147,11 @@ namespace IdentityServer3.Core
             // assertion grants
             public const string Saml2Bearer = "urn:ietf:params:oauth:grant-type:saml2-bearer";
             public const string JwtBearer   = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+        }
+
+        public static class ClientAssertionTypes
+        {
+            public const string JwtBearer   = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
         }
 
         public static class ResponseTypes
@@ -171,8 +195,24 @@ namespace IdentityServer3.Core
         public static readonly List<Flows> AllowedFlowsForAuthorizeEndpoint = new List<Flows>
                             {
                                 Flows.AuthorizationCode,
+                                Flows.AuthorizationCodeWithProofKey,
                                 Flows.Implicit,
-                                Flows.Hybrid
+                                Flows.Hybrid,
+                                Flows.HybridWithProofKey
+                            };
+
+        public static readonly List<Flows> AllowedFlowsForAuthorizationCodeGrantType = new List<Flows>
+                            {
+                                Flows.AuthorizationCode,
+                                Flows.AuthorizationCodeWithProofKey,
+                                Flows.Hybrid,
+                                Flows.HybridWithProofKey
+                            };
+
+        public static readonly Dictionary<Flows, IList<string>> ProofKeyFlowToResponseTypesMapping = new Dictionary<Flows, IList<string>>
+                            {
+                                { Flows.AuthorizationCodeWithProofKey, new List<string> { ResponseTypes.Code } },
+                                { Flows.HybridWithProofKey, new List<string> { ResponseTypes.CodeIdToken, ResponseTypes.CodeIdTokenToken, ResponseTypes.CodeToken } }
                             };
 
         public enum ScopeRequirement
@@ -206,8 +246,10 @@ namespace IdentityServer3.Core
         public static readonly Dictionary<Flows, IEnumerable<string>> AllowedResponseModesForFlow = new Dictionary<Flows, IEnumerable<string>>
                             {
                                 { Flows.AuthorizationCode, new[] { ResponseModes.Query, ResponseModes.FormPost } },
+                                { Flows.AuthorizationCodeWithProofKey, new[] { ResponseModes.Query, ResponseModes.FormPost } },
                                 { Flows.Implicit, new[] { ResponseModes.Fragment, ResponseModes.FormPost }},
-                                { Flows.Hybrid, new[] { ResponseModes.Fragment, ResponseModes.FormPost }}
+                                { Flows.Hybrid, new[] { ResponseModes.Fragment, ResponseModes.FormPost }},
+                                { Flows.HybridWithProofKey, new[] { ResponseModes.Fragment, ResponseModes.FormPost }}
                             };
 
         public static class ResponseModes
@@ -271,6 +313,18 @@ namespace IdentityServer3.Core
             public const string HomeRealm = "idp:";
             public const string Tenant = "tenant:";
         }
+
+        public static class CodeChallengeMethods
+        {
+            public const string Plain = "plain";
+            public const string SHA_256 = "S256";
+        }
+
+        public static readonly List<string> SupportedCodeChallengeMethods = new List<string>
+                            {
+                                CodeChallengeMethods.Plain,
+                                CodeChallengeMethods.SHA_256
+                            };
 
         public static class AuthorizeErrors
         {
@@ -498,6 +552,9 @@ namespace IdentityServer3.Core
             /// <summary>JWT ID. A unique identifier for the token, which can be used to prevent reuse of the token. These tokens MUST only be used once, unless conditions for reuse were negotiated between the parties; any such negotiation is beyond the scope of this specification.</summary>
             public const string JwtId                               = "jti";
 
+            /// <summary> Proof key confirmation </summary>
+            public const string Confirmation                        = "cnf";
+
             /// <summary>OAuth 2.0 Client Identifier valid at the Authorization Server.</summary>
             public const string ClientId         = "client_id";
             
@@ -528,7 +585,6 @@ namespace IdentityServer3.Core
             ClaimTypes.Issuer,
             ClaimTypes.NotBefore,
             ClaimTypes.Expiration,
-            ClaimTypes.UpdatedAt,
             ClaimTypes.IssuedAt,
             ClaimTypes.AuthenticationMethod,
             ClaimTypes.AuthenticationTime,
@@ -584,7 +640,7 @@ namespace IdentityServer3.Core
         {
             public const string SharedSecret = "SharedSecret";
             public const string X509Certificate = "X509Certificate";
-            public const string JwtBearer = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+            public const string JwtBearer = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
         }
 
         public static class SecretTypes
@@ -684,10 +740,10 @@ namespace IdentityServer3.Core
 
         public static class Authentication
         {
-            public const string SigninId                 = "signinid";
-            public const string SignoutId                = "id";
-            public const string KatanaAuthenticationType = "katanaAuthenticationType";
-            public const string PartialLoginRememberMe = "idsvr:rememberme";
+            public const string SigninId                    = "signinid";
+            public const string SignoutId                   = "id";
+            public const string KatanaAuthenticationType    = "katanaAuthenticationType";
+            public const string PartialLoginRememberMe      = "idsvr:rememberme";
         }
 
         public static class LocalizationCategories
@@ -725,5 +781,20 @@ namespace IdentityServer3.Core
         {
             public const string Json = "json";
         }
+
+        public static IEnumerable<string> AllowedProofKeyAlgorithms = new[]
+        {
+            OidcConstants.Algorithms.Asymmetric.RS256,
+            OidcConstants.Algorithms.Asymmetric.RS384,
+            OidcConstants.Algorithms.Asymmetric.RS512,
+
+            OidcConstants.Algorithms.Asymmetric.ES256,
+            OidcConstants.Algorithms.Asymmetric.ES384,
+            OidcConstants.Algorithms.Asymmetric.ES512,
+
+            OidcConstants.Algorithms.Asymmetric.PS256,
+            OidcConstants.Algorithms.Asymmetric.PS384,
+            OidcConstants.Algorithms.Asymmetric.PS512,
+        };
     }
 }
